@@ -1,0 +1,4 @@
+Precisamos criar mais um campo na tabela produto, que é o valor na venda, e saber o valor pelo qual o item foi comprado
+e tambem para podermos fazer contas, por exemplo se um cara comprou varias rosas e varios lirios, pra termos a noção
+
+Acho bom a gente implementar a tabela de LOG/Auditoria pra o usuario saber quem mexeu o que e aonde
