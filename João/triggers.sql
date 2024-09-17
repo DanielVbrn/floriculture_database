@@ -29,4 +29,6 @@ FOR EACH ROW
 EXECUTE FUNCTION verificar_e_cadastrar_estoque();
 
 
-INSERT INTO CLIENTE VALUES(DEFAULT 'DANIEL VITOR', '2004-08-09', '86995185525')
+
+
+select cadastrar_cliente('CLIENTE', 2, 'IIII', '2002-09-07', '423423432')

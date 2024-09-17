@@ -1,8 +1,0 @@
-create or replace function remover_cliente(
-	c_nome_table varchar,
-	c_cod_cli int,
-) returns void as $$
-begin 
-	delete from cliente where cod_cli = c_cod_cliente;
-end;
-$$ language plpgsql;
