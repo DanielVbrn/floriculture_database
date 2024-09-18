@@ -31,4 +31,4 @@ EXECUTE FUNCTION verificar_e_cadastrar_estoque();
 
 
 
-select cadastrar_cliente('CLIENTE', 2, 'IIII', '2002-09-07', '423423432')
+select cadastrar_cliente('CLIENTE', 2, 'IIII', '2002-09-07', '423423432');
