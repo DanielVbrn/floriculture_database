@@ -5,15 +5,15 @@ CREATE USER DANIEL WITH PASSWORD '123'
 
 GRANT FUNCIONARIO TO MARIA
 
--- funcionario
+-- funcionario	
 create role funcionario
 
 create user MARIA WITH PASSWORD '123'
 
-GRANT EXECUTE ON FUNCTION CADASTRAR_ITEM_VENDA(
-    p_cod_venda INT,
-    p_cod_estoque INT,
-    p_qtd_itens_venda NUMERIC
+GRANT EXECUTE ON FUNCTION ATUALIZAR_ITEM_VENDA(
+    COD INT,
+    CAMPOS TEXT[],
+    VALORES TEXT[]
 ) TO FUNCIONARIO
 
 
