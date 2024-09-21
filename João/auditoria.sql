@@ -6,60 +6,59 @@ CREATE TABLE auditoria (
     campo_modificado VARCHAR(255),
     valor_anterior TEXT,
     valor_atual TEXT,
-    date_time_alteracao TIMESTAMP DEFAULT NOW()
+    date_time_operacao TIMESTAMP DEFAULT NOW()
 );
 
 CREATE OR REPLACE FUNCTION registrar_auditoria()
 RETURNS TRIGGER AS $$
+DECLARE
+    op_type TEXT;
+    col RECORD;
+    old_value TEXT;
+    new_value TEXT;
 BEGIN
-    DECLARE
-        op_type TEXT;
-    BEGIN
-        IF TG_OP = 'INSERT' THEN
-            op_type := 'INSERT';
-        ELSIF TG_OP = 'UPDATE' THEN
-            op_type := 'UPDATE';
-        ELSIF TG_OP = 'DELETE' THEN
-            op_type := 'DELETE';
-        END IF;
+    IF TG_OP = 'INSERT' THEN
+        op_type := 'INSERT';
+    ELSIF TG_OP = 'UPDATE' THEN
+        op_type := 'UPDATE';
+    ELSIF TG_OP = 'DELETE' THEN
+        op_type := 'DELETE';
+    END IF;
 
-        IF op_type = 'UPDATE' THEN
-            FOR col IN
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = TG_TABLE_NAME
-            LOOP
-                EXECUTE format(
-                    'INSERT INTO auditoria (tabela_alterada, usuario_mudanca, operacao, campo_modificado, valor_anterior, valor_atual, date_time_alteracao)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7)',
-                    TG_TABLE_NAME,
-                    SESSION_USER,
-                    op_type,
-                    col.column_name,
-                    OLD.(col.column_name)::TEXT,
-                    NEW.(col.column_name)::TEXT,
-                    NOW()
-                );
-            END LOOP;
-        ELSE
+    IF op_type = 'UPDATE' THEN
+        FOR col IN
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = TG_TABLE_NAME
+        LOOP
             EXECUTE format(
-                'INSERT INTO auditoria (tabela_alterada, usuario_mudanca, operacao, date_time_alteracao)
-                 VALUES ($1, $2, $3, $4)',
+                'SELECT $1, $2 FROM (VALUES (OLD.%I), (NEW.%I)) AS v(a, b)',
+                col.column_name, col.column_name
+            ) INTO old_value, new_value;
+
+            EXECUTE format(
+                'INSERT INTO auditoria (tabela_alterada, usuario_mudanca, operacao, campo_modificado, valor_anterior, valor_atual, date_time_alteracao)
+                 VALUES (%L, %L, %L, %L, %L, %L, NOW())',
                 TG_TABLE_NAME,
                 SESSION_USER,
                 op_type,
-                NOW()
+                col.column_name,
+                old_value,
+                new_value
             );
-        END IF;
-        RETURN NEW;
-    END;
+        END LOOP;
+    ELSE
+        EXECUTE format(
+            'INSERT INTO auditoria (tabela_alterada, usuario_mudanca, operacao, date_time_alteracao)
+             VALUES (%L, %L, %L, NOW())',
+            TG_TABLE_NAME,
+            SESSION_USER,
+            op_type
+        );
+    END IF;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_auditoria_produto
-AFTER UPDATE ON produto
-FOR EACH ROW
-EXECUTE FUNCTION registrar_auditoria_produto();
 
 -- cria auditoria para todas as tabelas
 DO $$
@@ -69,8 +68,9 @@ BEGIN
     FOR table_rec IN
         SELECT table_name
         FROM information_schema.tables
-        WHERE table_schema = 'public' -- Ajuste conforme o schema desejado
+        WHERE table_schema = 'public'
           AND table_type = 'BASE TABLE'
+          AND table_name != 'auditoria'
     LOOP
         EXECUTE format(
             'CREATE TRIGGER trigger_auditoria_%I
@@ -82,3 +82,5 @@ BEGIN
     END LOOP;
 END;
 $$;
+
+drop trigger trigger_auditoria_auditoria on auditoria
