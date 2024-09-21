@@ -1,6 +1,6 @@
-CREATE OR REPLACE FUNCTION ATUALIZAR_TUDO(
+CREATE OR REPLACE FUNCTION ATUALIZAR_REGISTRO(
     NOME_TABELA TEXT,
-    COD INT,
+    BUSCA TEXT,
     CAMPOS TEXT[],
     VALORES TEXT[]
 ) RETURNS VOID AS $$
@@ -9,12 +9,19 @@ DECLARE
     primeira_coluna TEXT;
     sql TEXT;
     set_clauses TEXT := '';
+    busca_clausula TEXT;
 BEGIN
     SELECT column_name INTO primeira_coluna
     FROM information_schema.columns
     WHERE table_name = LOWER(NOME_TABELA)
     ORDER BY ordinal_position
     LIMIT 1;
+
+    IF BUSCA ~ '^[0-9]+$' THEN
+        busca_clausula := format('%I = %L', primeira_coluna, BUSCA::INT);
+    ELSE
+        busca_clausula := format('LOWER(%I) = LOWER(%L)', 'nome', BUSCA);
+    END IF;
 
     FOR i IN 1 .. array_length(CAMPOS, 1) LOOP
         set_clauses := set_clauses || format('%I = %L', LOWER(CAMPOS[i]), VALORES[i]);
@@ -23,9 +30,33 @@ BEGIN
         END IF;
     END LOOP;
 
-    sql := FORMAT('UPDATE %I SET %s WHERE %I = %L', LOWER(NOME_TABELA), set_clauses, primeira_coluna, COD);
+    sql := FORMAT('UPDATE %I SET %s WHERE %s', LOWER(NOME_TABELA), set_clauses, busca_clausula);
     
     EXECUTE sql;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION DELETAR_REGISTRO(
+    NOME_TABELA TEXT,
+    BUSCA TEXT
+) RETURNS VOID AS $$
+DECLARE
+    primeira_coluna TEXT;
+    busca_clausula TEXT;
+BEGIN
+    SELECT column_name INTO primeira_coluna
+    FROM information_schema.columns
+    WHERE table_name = LOWER(NOME_TABELA)
+    ORDER BY ordinal_position
+    LIMIT 1;
+
+    IF BUSCA ~ '^[0-9]+$' THEN
+        busca_clausula := format('%I = %L', primeira_coluna, BUSCA::INT);
+    ELSE
+        busca_clausula := format('LOWER(%I) = LOWER(%L)', 'nome', BUSCA);
+    END IF;
+
+    EXECUTE FORMAT('DELETE FROM %I WHERE %s', LOWER(NOME_TABELA), busca_clausula);
 END;
 $$ LANGUAGE plpgsql;
 
